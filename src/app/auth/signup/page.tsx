@@ -6,6 +6,17 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import OAuthButtons from "@/components/OAuthButtons";
 
+const SynaptLogo = () => (
+  <svg width="22" height="22" viewBox="0 0 26 26" fill="none" style={{ display: 'inline-block', verticalAlign: 'middle' }}>
+    <circle cx="13" cy="13" r="3.5" fill="#EF9F27" />
+    <circle cx="13" cy="13" r="7.5" stroke="#EF9F27" strokeWidth="0.75" strokeDasharray="2.5 2" fill="none" opacity="0.45" />
+    <circle cx="13" cy="13" r="11.5" stroke="#EF9F27" strokeWidth="0.5" strokeDasharray="1.5 3" fill="none" opacity="0.2" />
+    <circle cx="13" cy="4.5" r="1.5" fill="#FAC775" />
+    <circle cx="21.5" cy="18" r="1.5" fill="#FAC775" />
+    <circle cx="4.5" cy="18" r="1.5" fill="#FAC775" />
+  </svg>
+);
+
 export default function SignupPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
@@ -42,8 +53,9 @@ export default function SignupPage() {
     <main className="min-h-screen flex items-center justify-center px-4" style={{ background: "var(--background)" }}>
       <div className="w-full max-w-sm space-y-6">
         <div className="text-center space-y-1">
-          <h1 className="text-2xl font-bold">
-            Focus<span style={{ color: "var(--accent)" }}>Loop</span>
+          <h1 className="text-2xl font-bold" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+            <SynaptLogo />
+            <span style={{ color: "var(--foreground)" }}>Synapt</span>
           </h1>
           <p className="text-sm" style={{ color: "#8888aa" }}>Create your account</p>
         </div>

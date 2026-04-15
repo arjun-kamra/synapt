@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
@@ -67,7 +69,7 @@ export default async function ProfilePage() {
     <main className="min-h-screen" style={{ background: "var(--background)" }}>
       <nav className="flex items-center justify-between px-6 py-4 border-b" style={{ borderColor: "var(--border)" }}>
         <Link href="/dashboard" className="text-lg font-bold">
-          Focus<span style={{ color: "var(--accent)" }}>Loop</span>
+          Synapt
         </Link>
         <SignOutButton />
       </nav>

@@ -2,8 +2,13 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "FocusLoop",
-  description: "Cognitive science-based productivity — detect drift, reset, recover.",
+  title: "Synapt",
+  description: "Detect attention drift. Reset in seconds. Track what works.",
+  openGraph: {
+    title: "Synapt",
+    description: "Detect attention drift. Reset in seconds. Track what works.",
+    siteName: "Synapt",
+  },
 };
 
 export default function RootLayout({

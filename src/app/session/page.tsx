@@ -1,5 +1,7 @@
 "use client";
 
+export const dynamic = "force-dynamic";
+
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -450,7 +452,7 @@ export default function SessionPage() {
       {/* Nav */}
       <nav className="flex items-center justify-between px-6 py-4 border-b" style={{ borderColor: "var(--border)" }}>
         <Link href="/dashboard" className="text-lg font-bold">
-          Focus<span style={{ color: "var(--accent)" }}>Loop</span>
+          Synapt
         </Link>
         {status === "running" && (
           <button
@@ -471,7 +473,7 @@ export default function SessionPage() {
             <div className="space-y-2">
               <h2 className="text-3xl font-bold">Start a Focus Session</h2>
               <p className="text-sm" style={{ color: "#8888aa" }}>
-                FocusLoop detects drift and resets you — silently, in the background.
+                Synapt detects drift and resets you — silently, in the background.
               </p>
             </div>
 
