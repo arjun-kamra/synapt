@@ -56,6 +56,14 @@ export type DriftEvent = {
 
 export type InterventionType = "breathing" | "posture" | "visual";
 
+export type DriftEventRecord = {
+  type: string;
+  elapsed: number;       // seconds since session start
+  confidence: number;
+  intervention_type: InterventionType | null;
+  recovery_seconds: number | null;
+};
+
 export type SessionSummary = {
   duration_seconds: number;
   focus_score: number;
@@ -64,4 +72,5 @@ export type SessionSummary = {
   fastest_recovery_seconds: number | null;
   best_intervention_type: InterventionType | null;
   drift_timeline: { elapsed: number; score: number }[];
+  drift_events: DriftEventRecord[];
 };

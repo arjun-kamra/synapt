@@ -5,6 +5,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import type { Intervention, Session } from "@/types";
 import SignOutButton from "@/components/SignOutButton";
+import CognitiveProfileCard from "@/components/CognitiveProfileCard";
 
 type InterventionStats = {
   type: string;
@@ -65,6 +66,14 @@ export default async function ProfilePage() {
   // Score trend (last 10 sessions)
   const trend = completedSessions.slice(0, 10).reverse();
 
+  // Trigger counts for cognitive profile
+  const triggerCounts: Record<string, number> = {};
+  for (const iv of (interventions ?? []) as Intervention[]) {
+    if (iv.drift_trigger) {
+      triggerCounts[iv.drift_trigger] = (triggerCounts[iv.drift_trigger] ?? 0) + 1;
+    }
+  }
+
   return (
     <main className="min-h-screen" style={{ background: "var(--background)" }}>
       <nav className="flex items-center justify-between px-6 py-4 border-b" style={{ borderColor: "var(--border)" }}>
@@ -104,6 +113,15 @@ export default async function ProfilePage() {
             </div>
           ))}
         </div>
+
+        {/* Cognitive Profile — shown after 5+ sessions */}
+        {completedSessions.length >= 5 && Object.keys(triggerCounts).length > 0 && (
+          <CognitiveProfileCard
+            triggerCounts={triggerCounts}
+            totalSessions={completedSessions.length}
+            avgScore={avgScore ?? 0}
+          />
+        )}
 
         {/* Best intervention */}
         {bestIntervention && (

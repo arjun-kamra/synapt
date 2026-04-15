@@ -5,6 +5,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import type { Session, Intervention } from "@/types";
 import SignOutButton from "@/components/SignOutButton";
+import InsightsCard from "@/components/InsightsCard";
 
 function formatDuration(seconds: number | null) {
   if (!seconds) return "—";
@@ -20,17 +21,33 @@ function scoreColor(score: number) {
   return "var(--danger)";
 }
 
-const INTERVENTION_META: Record<string, { icon: string; label: string }> = {
-  breathing: { icon: "🌬️", label: "Breathing" },
-  posture:   { icon: "🪑", label: "Posture" },
-  visual:    { icon: "👁️", label: "Visual" },
-};
+function weeklyGrade(sessions: Session[]): { grade: string; color: string } | null {
+  const cutoff = Date.now() - 7 * 24 * 60 * 60 * 1000;
+  const week = sessions.filter((s) => new Date(s.started_at).getTime() > cutoff);
+  if (week.length === 0) return null;
+  const avg = week.reduce((sum, s) => sum + s.focus_score, 0) / week.length;
+  if (avg >= 85) return { grade: "A", color: "var(--success)" };
+  if (avg >= 70) return { grade: "B", color: "var(--success)" };
+  if (avg >= 55) return { grade: "C", color: "var(--warning)" };
+  if (avg >= 40) return { grade: "D", color: "var(--warning)" };
+  return { grade: "F", color: "var(--danger)" };
+}
 
-const TRIGGER_META: Record<string, { icon: string; label: string }> = {
-  idle:             { icon: "💤", label: "Idle" },
-  tab_switch:       { icon: "🔁", label: "Tab switch" },
-  typing_slowdown:  { icon: "⌨️", label: "Typing slowdown" },
-};
+function recoveryStreak(sessions: Session[]): number {
+  // Consecutive sessions (most recent first) where avg_recovery improved or was ≤45s
+  let streak = 0;
+  let prevRecovery: number | null = null;
+  for (const s of sessions) {
+    if (s.avg_recovery_seconds == null) break;
+    if (prevRecovery === null || s.avg_recovery_seconds <= 45 || s.avg_recovery_seconds < prevRecovery) {
+      streak += 1;
+      prevRecovery = s.avg_recovery_seconds;
+    } else {
+      break;
+    }
+  }
+  return streak;
+}
 
 export default async function DashboardPage() {
   const supabase = await createClient();
@@ -43,7 +60,7 @@ export default async function DashboardPage() {
       .select("*")
       .eq("user_id", user.id)
       .order("started_at", { ascending: false })
-      .limit(20),
+      .limit(30),
     supabase.from("profiles").select("*").eq("id", user.id).single(),
     supabase
       .from("interventions")
@@ -62,60 +79,49 @@ export default async function DashboardPage() {
     ? `${Math.floor(totalSecs / 3600)}h ${Math.floor((totalSecs % 3600) / 60)}m`
     : `${Math.floor(totalSecs / 60)}m`;
 
-  // ── Insights calculations ────────────────────────────────
+  // ── Behavior change loop calculations ────────────────────
 
-  // Most common drift trigger
-  const triggerCounts: Record<string, number> = {};
-  for (const iv of (interventions ?? []) as Intervention[]) {
-    if (iv.drift_trigger) {
-      triggerCounts[iv.drift_trigger] = (triggerCounts[iv.drift_trigger] ?? 0) + 1;
-    }
-  }
-  const topTrigger = Object.entries(triggerCounts).sort((a, b) => b[1] - a[1])[0]?.[0] ?? null;
-
-  // Most effective reset type (lowest avg recovery_seconds)
-  const recoveryByType: Record<string, { sum: number; count: number }> = {};
-  for (const iv of (interventions ?? []) as Intervention[]) {
-    if (iv.recovered && iv.recovery_seconds != null) {
-      if (!recoveryByType[iv.type]) recoveryByType[iv.type] = { sum: 0, count: 0 };
-      recoveryByType[iv.type].sum += iv.recovery_seconds;
-      recoveryByType[iv.type].count += 1;
-    }
-  }
-  let bestResetType: string | null = null;
-  let bestResetAvg: number | null = null;
-  for (const [type, { sum, count }] of Object.entries(recoveryByType)) {
-    const avg = sum / count;
-    if (bestResetAvg === null || avg < bestResetAvg) {
-      bestResetAvg = avg;
-      bestResetType = type;
-    }
-  }
-
-  // Average time to first drift
-  const firstDriftSessions = completed.filter((s: Session) => s.time_to_first_drift_seconds != null);
-  const avgTimeToFirstDrift = firstDriftSessions.length
-    ? Math.round(
-        firstDriftSessions.reduce((sum: number, s: Session) => sum + (s.time_to_first_drift_seconds ?? 0), 0) /
-        firstDriftSessions.length
-      )
+  // Before vs After: first 10 vs last 10
+  const chronological = [...completed].reverse();
+  const first10 = chronological.slice(0, 10);
+  const last10 = chronological.slice(-10);
+  const beforeAvgScore = first10.length >= 3
+    ? Math.round(first10.reduce((s, x) => s + x.focus_score, 0) / first10.length)
+    : null;
+  const afterAvgScore = last10.length >= 3 && last10 !== first10
+    ? Math.round(last10.reduce((s, x) => s + x.focus_score, 0) / last10.length)
+    : null;
+  const beforeAvgRecovery = first10.filter((s: Session) => s.avg_recovery_seconds != null).length >= 2
+    ? Math.round(first10.filter((s: Session) => s.avg_recovery_seconds != null)
+        .reduce((sum: number, s: Session) => sum + (s.avg_recovery_seconds ?? 0), 0) /
+        first10.filter((s: Session) => s.avg_recovery_seconds != null).length)
+    : null;
+  const afterAvgRecovery = last10.filter((s: Session) => s.avg_recovery_seconds != null).length >= 2
+    ? Math.round(last10.filter((s: Session) => s.avg_recovery_seconds != null)
+        .reduce((sum: number, s: Session) => sum + (s.avg_recovery_seconds ?? 0), 0) /
+        last10.filter((s: Session) => s.avg_recovery_seconds != null).length)
     : null;
 
-  // Recovery latency trend — last 7 sessions with avg_recovery_seconds
-  const last7 = completed
-    .filter((s: Session) => s.avg_recovery_seconds != null)
-    .slice(0, 7)
-    .reverse();
+  const showBeforeAfter = beforeAvgScore !== null && afterAvgScore !== null && completed.length >= 6;
+  const scoreDelta = showBeforeAfter ? afterAvgScore! - beforeAvgScore! : 0;
+  const recoveryDelta = beforeAvgRecovery != null && afterAvgRecovery != null
+    ? afterAvgRecovery - beforeAvgRecovery
+    : null;
 
-  const showInsights = topTrigger || bestResetType || avgTimeToFirstDrift !== null || last7.length >= 2;
+  // Recovery streak
+  const streak = recoveryStreak(completed);
+
+  // Weekly grade
+  const grade = weeklyGrade(completed);
+
+  // Weekly trend sparkline (last 7 sessions)
+  const weekSessions = completed.slice(0, 7).reverse();
 
   return (
     <main className="min-h-screen" style={{ background: "var(--background)" }}>
       {/* Nav */}
       <nav className="flex items-center justify-between px-6 py-4 border-b" style={{ borderColor: "var(--border)" }}>
-        <span className="text-lg font-bold">
-          Synapt
-        </span>
+        <span className="text-lg font-bold">Synapt</span>
         <div className="flex items-center gap-4">
           <Link href="/profile" className="text-sm" style={{ color: "#8888aa" }}>Profile</Link>
           <SignOutButton />
@@ -160,84 +166,97 @@ export default async function DashboardPage() {
           <div className="text-2xl">→</div>
         </Link>
 
-        {/* ── Insights ── */}
-        {showInsights && (
+        {/* ── Behavior Change Loop ── */}
+        {completed.length >= 3 && (
           <div className="space-y-4">
             <h2 className="text-sm font-semibold uppercase tracking-wider" style={{ color: "#8888aa" }}>
-              Insights
+              Progress
             </h2>
-            <div className="grid grid-cols-2 gap-3">
-              {/* Most common trigger */}
-              {topTrigger && TRIGGER_META[topTrigger] && (
-                <div className="p-4 rounded-2xl border space-y-1"
-                  style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
-                  <p className="text-xs" style={{ color: "#8888aa" }}>Most common drift</p>
-                  <p className="font-semibold text-base">
-                    {TRIGGER_META[topTrigger].icon} {TRIGGER_META[topTrigger].label}
-                  </p>
-                  <p className="text-xs" style={{ color: "#55556a" }}>
-                    {triggerCounts[topTrigger]} event{triggerCounts[topTrigger] !== 1 ? "s" : ""}
-                  </p>
-                </div>
-              )}
+            <div className="grid grid-cols-3 gap-3">
 
-              {/* Best reset type */}
-              {bestResetType && INTERVENTION_META[bestResetType] && (
-                <div className="p-4 rounded-2xl border space-y-1"
+              {/* Weekly grade */}
+              {grade && (
+                <div className="p-4 rounded-2xl border text-center space-y-1"
                   style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
-                  <p className="text-xs" style={{ color: "#8888aa" }}>Most effective reset</p>
-                  <p className="font-semibold text-base">
-                    {INTERVENTION_META[bestResetType].icon} {INTERVENTION_META[bestResetType].label}
-                  </p>
-                  <p className="text-xs" style={{ color: "#55556a" }}>
-                    avg {Math.round(bestResetAvg!)}s recovery
-                  </p>
-                </div>
-              )}
-
-              {/* Avg time to first drift */}
-              {avgTimeToFirstDrift !== null && (
-                <div className="p-4 rounded-2xl border space-y-1"
-                  style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
-                  <p className="text-xs" style={{ color: "#8888aa" }}>Avg time to first drift</p>
-                  <p className="font-semibold text-base">{formatDuration(avgTimeToFirstDrift)}</p>
-                  <p className="text-xs" style={{ color: "#55556a" }}>across {firstDriftSessions.length} sessions</p>
-                </div>
-              )}
-
-              {/* Recovery trend */}
-              {last7.length >= 2 && (
-                <div className="p-4 rounded-2xl border space-y-2"
-                  style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
-                  <p className="text-xs" style={{ color: "#8888aa" }}>Recovery latency trend</p>
-                  <div className="flex items-end gap-1 h-10">
-                    {last7.map((s: Session, i: number) => {
-                      const val = s.avg_recovery_seconds ?? 0;
-                      const max = Math.max(...last7.map((x: Session) => x.avg_recovery_seconds ?? 0), 1);
-                      const height = Math.max(4, (val / max) * 40);
-                      // Lower is better — color inversely
-                      const ratio = val / max;
-                      const color = ratio < 0.4 ? "var(--success)" : ratio < 0.7 ? "var(--warning)" : "var(--danger)";
+                  <p className="text-xs" style={{ color: "#8888aa" }}>This week</p>
+                  <div className="text-3xl font-bold" style={{ color: grade.color }}>{grade.grade}</div>
+                  <div className="flex items-end justify-center gap-0.5 h-6 mt-1">
+                    {weekSessions.map((s, i) => {
+                      const h = Math.max(3, (s.focus_score / 100) * 24);
                       return (
                         <div key={i} className="flex-1 rounded-t-sm"
-                          style={{ height, background: color, opacity: 0.85 }} />
+                          style={{ height: h, background: scoreColor(s.focus_score), opacity: 0.8 }} />
                       );
                     })}
                   </div>
-                  <p className="text-xs" style={{ color: "#55556a" }}>
-                    {(() => {
-                      const first = last7[0].avg_recovery_seconds ?? 0;
-                      const last = last7[last7.length - 1].avg_recovery_seconds ?? 0;
-                      if (last < first) return "↓ Getting faster";
-                      if (last > first) return "↑ Taking longer";
-                      return "→ Stable";
-                    })()}
-                  </p>
+                </div>
+              )}
+
+              {/* Recovery streak */}
+              {streak >= 2 && (
+                <div className="p-4 rounded-2xl border text-center space-y-1"
+                  style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
+                  <p className="text-xs" style={{ color: "#8888aa" }}>Recovery streak</p>
+                  <div className="text-3xl font-bold" style={{ color: "var(--accent)" }}>{streak}</div>
+                  <p className="text-xs" style={{ color: "#55556a" }}>sessions improving</p>
+                </div>
+              )}
+
+              {/* Before vs After score delta */}
+              {showBeforeAfter && (
+                <div className="p-4 rounded-2xl border text-center space-y-1"
+                  style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
+                  <p className="text-xs" style={{ color: "#8888aa" }}>Score trend</p>
+                  <div className="text-3xl font-bold"
+                    style={{ color: scoreDelta >= 0 ? "var(--success)" : "var(--danger)" }}>
+                    {scoreDelta >= 0 ? "+" : ""}{scoreDelta}
+                  </div>
+                  <p className="text-xs" style={{ color: "#55556a" }}>first vs recent</p>
                 </div>
               )}
             </div>
+
+            {/* Before vs After detail panel */}
+            {showBeforeAfter && (
+              <div className="p-5 rounded-2xl border"
+                style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
+                <p className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: "#8888aa" }}>
+                  Before vs After
+                </p>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <p className="text-xs" style={{ color: "#55556a" }}>First {first10.length} sessions</p>
+                    <div className="text-xl font-bold"
+                      style={{ color: scoreColor(beforeAvgScore!) }}>{beforeAvgScore}</div>
+                    <p className="text-xs" style={{ color: "#55556a" }}>avg focus score</p>
+                    {beforeAvgRecovery && (
+                      <p className="text-xs" style={{ color: "#55556a" }}>{beforeAvgRecovery}s avg recovery</p>
+                    )}
+                  </div>
+                  <div className="space-y-2">
+                    <p className="text-xs" style={{ color: "#55556a" }}>Last {last10.length} sessions</p>
+                    <div className="text-xl font-bold"
+                      style={{ color: scoreColor(afterAvgScore!) }}>{afterAvgScore}</div>
+                    <p className="text-xs" style={{ color: "#55556a" }}>avg focus score</p>
+                    {afterAvgRecovery && (
+                      <p className="text-xs"
+                        style={{ color: recoveryDelta !== null && recoveryDelta < 0 ? "var(--success)" : "#55556a" }}>
+                        {afterAvgRecovery}s avg recovery
+                        {recoveryDelta !== null && recoveryDelta < 0 && ` (${Math.abs(recoveryDelta)}s faster)`}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
+
+        {/* ── AI Pattern Detection (client component) ── */}
+        <InsightsCard
+          sessions={completed}
+          interventions={(interventions ?? []) as Intervention[]}
+        />
 
         {/* Session history */}
         <div className="space-y-4">

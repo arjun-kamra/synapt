@@ -1,3 +1,22 @@
+/**
+ * useDriftDetector — Real-time behavioral signal fusion
+ *
+ * Monitors three independent attention signals and fuses their confidence
+ * scores into a single drift event when the combined score crosses a threshold.
+ *
+ * Signal sources:
+ *   - Idle detection: polls for inactivity every 5s (mouse, keyboard, scroll, touch)
+ *   - Tab visibility: listens to document visibilitychange events
+ *   - Typing velocity: tracks keystrokes in a rolling 10s window, compares
+ *     current WPM against a personal baseline established in the first 2 minutes
+ *
+ * Confidence fusion:
+ *   Each signal contributes a weighted confidence score (0–1). Signals are
+ *   additive — overlapping signals increase certainty. A 2-minute cooldown
+ *   prevents alert fatigue after each drift event fires.
+ *
+ * Detection version: v2
+ */
 import { useEffect, useRef, useCallback } from "react";
 import type { DriftEvent, DriftSignal } from "@/types";
 

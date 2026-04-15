@@ -181,8 +181,9 @@ export default function Home() {
             color: '#f5f0e8', marginBottom: 20, maxWidth: 620, marginLeft: 'auto', marginRight: 'auto',
           }}
         >
-          Your brain drifts.<br />
-          <span style={{ color: '#EF9F27' }}>Synapt</span> catches it.
+          Synapt tells you exactly when<br />
+          you lose focus — and trains you<br />
+          to <span style={{ color: '#EF9F27' }}>recover faster.</span>
         </motion.h1>
 
         {/* Subtext */}
@@ -195,7 +196,7 @@ export default function Home() {
             maxWidth: 460, margin: '0 auto 40px',
           }}
         >
-          Detects attention drift in real time and resets you with personalized interventions — backed by neuroscience.
+          Real-time drift detection. Personalized resets. Your focus score improves every session.
         </motion.p>
 
         {/* CTA buttons */}

@@ -1,3 +1,29 @@
+/**
+ * useScreenCapture — Adaptive intervention optimization via screen analysis
+ *
+ * Captures the user's screen at a low frequency (every 45s) and sends frames
+ * to Claude vision for focus-state analysis. Results feed into the intervention
+ * selection pipeline to choose the most contextually appropriate reset type.
+ *
+ * Capture pipeline:
+ *   1. getDisplayMedia() at 1fps — minimal CPU overhead
+ *   2. Draw current frame to offscreen canvas, resize to 640×400
+ *   3. Encode as JPEG (quality 0.6) → base64 → POST /api/analyze-frame
+ *   4. Claude vision returns: { focused, confidence, reason }
+ *   5. onAnalysis callback fires — caller integrates signal with drift detector
+ *
+ * Status states:
+ *   "idle"        — not capturing
+ *   "active"      — stream running, polling every 45s
+ *   "denied"      — user rejected the display capture permission prompt
+ *   "unsupported" — browser does not support getDisplayMedia
+ *
+ * Privacy: frames are resized before leaving the device and are never stored.
+ * If the user stops sharing from the browser's native UI, the stream ends
+ * gracefully and status returns to "idle".
+ *
+ * Adaptive optimization version: v1
+ */
 import { useEffect, useRef, useCallback, useState } from "react";
 
 const CAPTURE_INTERVAL_MS = 45_000;  // analyze every 45 seconds

@@ -3,6 +3,7 @@
 export const dynamic = "force-dynamic";
 
 import { useState, useEffect, useRef, useCallback } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
@@ -10,6 +11,9 @@ import { useDriftDetector } from "@/lib/useDriftDetector";
 import { useScreenCapture } from "@/lib/useScreenCapture";
 import type { ScreenAnalysis } from "@/lib/useScreenCapture";
 import InterventionModal from "@/components/InterventionModal";
+import FocusReplayChart from "@/components/FocusReplayChart";
+import SessionAISummary from "@/components/SessionAISummary";
+import SessionShareCard from "@/components/SessionShareCard";
 import type { DriftEvent, InterventionType, TaskType, SessionSummary } from "@/types";
 
 const INTERVENTION_TYPES: InterventionType[] = ["breathing", "posture", "visual"];
@@ -35,8 +39,6 @@ function SummaryScreen({ summary, onContinue }: { summary: SessionSummary; onCon
     posture:   { icon: "🪑", label: "Posture" },
     visual:    { icon: "👁️", label: "Visual" },
   };
-
-  const maxScore = Math.max(...summary.drift_timeline.map((p) => p.score), 1);
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center px-6 py-12"
@@ -88,25 +90,26 @@ function SummaryScreen({ summary, onContinue }: { summary: SessionSummary; onCon
           ))}
         </div>
 
-        {/* Focus timeline */}
-        {summary.drift_timeline.length >= 2 && (
-          <div className="space-y-2">
+        {/* Focus Replay */}
+        <FocusReplayChart
+          timeline={summary.drift_timeline}
+          driftEvents={summary.drift_events}
+          durationSeconds={summary.duration_seconds}
+        />
+
+        {/* AI Session Summary */}
+        {summary.drift_count > 0 && (
+          <div className="p-4 rounded-2xl border space-y-2"
+            style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
             <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "#8888aa" }}>
-              Focus over time
+              Session Analysis
             </p>
-            <div className="p-4 rounded-xl border" style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
-              <div className="flex items-end gap-1 h-16">
-                {summary.drift_timeline.map((pt, i) => {
-                  const height = Math.max(6, (pt.score / maxScore) * 64);
-                  return (
-                    <div key={i} className="flex-1 rounded-t-sm"
-                      style={{ height, background: scoreColor(pt.score), opacity: 0.8 }} />
-                  );
-                })}
-              </div>
-            </div>
+            <SessionAISummary summary={summary} />
           </div>
         )}
+
+        {/* Share card */}
+        <SessionShareCard summary={summary} />
 
         <button
           onClick={onContinue}
@@ -148,6 +151,8 @@ export default function SessionPage() {
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const recoveryDataRef = useRef<{ type: InterventionType; seconds: number }[]>([]);
   const sessionIdRef = useRef<string | null>(null);
+  const driftEventsRef = useRef<import("@/types").DriftEventRecord[]>([]);
+  const currentDriftElapsedRef = useRef<number>(0);
 
   // Keep sessionIdRef in sync
   useEffect(() => { sessionIdRef.current = sessionId; }, [sessionId]);
@@ -248,6 +253,16 @@ export default function SessionPage() {
       firstDriftElapsedRef.current = elapsed;
     }
 
+    // Track drift event for replay
+    currentDriftElapsedRef.current = elapsed;
+    driftEventsRef.current.push({
+      type: event.type,
+      elapsed,
+      confidence: event.confidence,
+      intervention_type: null,
+      recovery_seconds: null,
+    });
+
     // Update session score in DB
     await supabase
       .from("sessions")
@@ -295,6 +310,7 @@ export default function SessionPage() {
     firstDriftElapsedRef.current = null;
     interventionIndexRef.current = 0;
     recoveryDataRef.current = [];
+    driftEventsRef.current = [];
 
     const { data } = await supabase
       .from("sessions")
@@ -362,6 +378,13 @@ export default function SessionPage() {
         response_choice: responseChoice,
       })
       .eq("id", interventionId);
+
+    // Update last drift event record with intervention outcome
+    const lastDriftEvent = driftEventsRef.current[driftEventsRef.current.length - 1];
+    if (lastDriftEvent && currentIntervention) {
+      lastDriftEvent.intervention_type = currentIntervention;
+      lastDriftEvent.recovery_seconds = recoverySeconds;
+    }
 
     if (recovered && recoverySeconds !== null) {
       const bonus = recoverySeconds <= 60 ? 3 : 0;
@@ -436,6 +459,7 @@ export default function SessionPage() {
       fastest_recovery_seconds: fastest,
       best_intervention_type: bestType,
       drift_timeline: timeline,
+      drift_events: [...driftEventsRef.current],
     });
     setEnding(false);
   }
@@ -468,8 +492,16 @@ export default function SessionPage() {
       <div className="flex-1 flex flex-col items-center justify-center px-6 space-y-10">
 
         {/* ── IDLE STATE ── */}
+        <AnimatePresence mode="wait">
         {status === "idle" && (
-          <div className="text-center space-y-7 max-w-sm w-full">
+          <motion.div
+            key="idle"
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.3 }}
+            className="text-center space-y-7 max-w-sm w-full"
+          >
             <div className="space-y-2">
               <h2 className="text-3xl font-bold">Start a Focus Session</h2>
               <p className="text-sm" style={{ color: "#8888aa" }}>
@@ -542,12 +574,19 @@ export default function SessionPage() {
               style={{ background: "var(--accent)", color: "#fff" }}>
               Begin Session
             </button>
-          </div>
+          </motion.div>
         )}
 
         {/* ── RUNNING STATE ── */}
         {status === "running" && (
-          <div className="w-full max-w-md space-y-8">
+          <motion.div
+            key="running"
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.3 }}
+            className="w-full max-w-md space-y-8"
+          >
             {/* Timer */}
             <div className="text-center">
               <div className="text-7xl font-bold tabular-nums tracking-tight" style={{ color: "var(--foreground)" }}>
@@ -626,8 +665,9 @@ export default function SessionPage() {
                 </div>
               </div>
             )}
-          </div>
+          </motion.div>
         )}
+        </AnimatePresence>
       </div>
 
       {/* ── INTERVENTION OVERLAY ── */}
