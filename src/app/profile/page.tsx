@@ -208,9 +208,9 @@ export default async function ProfilePage() {
         {completedSessions.length === 0 && (
           <div className="py-16 text-center rounded-2xl border" style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
             <p className="text-sm" style={{ color: "#8888aa" }}>Complete a few sessions to see your focus profile.</p>
-            <Link href="/session" className="inline-block mt-4 px-5 py-2.5 rounded-xl font-semibold text-sm"
-              style={{ background: "var(--accent)", color: "#fff" }}>
-              Start Session
+            <Link href="/download" className="inline-block mt-4 px-5 py-2.5 rounded-xl font-semibold text-sm"
+              style={{ background: "var(--accent)", color: "#1a0e00", textDecoration: "none" }}>
+              Download Extension
             </Link>
           </div>
         )}

@@ -121,9 +121,15 @@ export default async function DashboardPage() {
     <main className="min-h-screen" style={{ background: "var(--background)" }}>
       {/* Nav */}
       <nav className="flex items-center justify-between px-6 py-4 border-b" style={{ borderColor: "var(--border)" }}>
-        <span className="text-lg font-bold">Synapt</span>
+        <Link href="/" className="text-lg font-bold" style={{ textDecoration: "none", color: "var(--foreground)" }}>Synapt</Link>
         <div className="flex items-center gap-4">
+          <Link href="/" className="text-sm" style={{ color: "#8888aa" }}>Home</Link>
+          <Link href="/research" className="text-sm" style={{ color: "#8888aa" }}>Research</Link>
           <Link href="/profile" className="text-sm" style={{ color: "#8888aa" }}>Profile</Link>
+          <Link href="/download" className="text-sm font-semibold px-4 py-1.5 rounded-lg"
+            style={{ background: "var(--accent)", color: "#1a0e00", textDecoration: "none" }}>
+            Download Extension
+          </Link>
           <SignOutButton />
         </div>
       </nav>
@@ -152,19 +158,21 @@ export default async function DashboardPage() {
           ))}
         </div>
 
-        {/* Start session CTA */}
-        <Link
-          href="/session"
-          className="flex items-center justify-between px-6 py-5 rounded-2xl border transition-all hover:opacity-90"
+        {/* Extension banner */}
+        <div className="flex items-center justify-between px-6 py-5 rounded-2xl border"
           style={{ background: "var(--accent-glow)", borderColor: "var(--accent)" }}>
           <div>
-            <div className="font-semibold">Start a Focus Session</div>
+            <div className="font-semibold">Start focusing with the Synapt extension</div>
             <div className="text-sm mt-0.5" style={{ color: "#8888aa" }}>
-              Confidence-weighted drift detection · adaptive resets
+              Your session data will appear here automatically after each session.
             </div>
           </div>
-          <div className="text-2xl">→</div>
-        </Link>
+          <Link href="/download"
+            className="text-sm font-semibold px-4 py-2 rounded-lg whitespace-nowrap"
+            style={{ background: "var(--accent)", color: "#1a0e00", textDecoration: "none" }}>
+            Download Extension
+          </Link>
+        </div>
 
         {/* ── Behavior Change Loop ── */}
         {completed.length >= 3 && (
@@ -267,7 +275,7 @@ export default async function DashboardPage() {
           {completed.length === 0 ? (
             <div className="py-12 text-center rounded-2xl border"
               style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
-              <p className="text-sm" style={{ color: "#8888aa" }}>No sessions yet. Start one above!</p>
+              <p className="text-sm" style={{ color: "#8888aa" }}>No sessions yet. Install the extension to get started.</p>
             </div>
           ) : (
             <div className="space-y-2">

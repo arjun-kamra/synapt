@@ -137,9 +137,10 @@ export default function Home() {
         </div>
         <div style={{ display: 'flex', gap: 28 }}>
           {[
-            { label: 'How it works', href: '#' },
+            { label: 'Home', href: '/' },
+            { label: 'Dashboard', href: '/dashboard' },
             { label: 'Research', href: '/research' },
-            { label: 'Pricing', href: '#' },
+            { label: 'Profile', href: '/profile' },
           ].map(({ label, href }) => (
             <a key={label} href={href} style={{ fontSize: 13, color: 'rgba(255,255,255,0.35)', textDecoration: 'none',
               transition: 'color 0.2s' }}
@@ -148,15 +149,11 @@ export default function Home() {
             >{label}</a>
           ))}
         </div>
-        <a href="/auth/login" style={{
-          fontSize: 13, fontWeight: 500, color: '#f5f0e8',
-          background: 'rgba(255,255,255,0.07)', border: '0.5px solid rgba(255,255,255,0.1)',
+        <a href="/download" style={{
+          fontSize: 13, fontWeight: 600, color: '#1a0e00',
+          background: '#EF9F27',
           padding: '7px 16px', borderRadius: 8, textDecoration: 'none',
-          transition: 'background 0.2s',
-        }}
-          onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.12)')}
-          onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.07)')}
-        >Get started</a>
+        }}>Download Extension</a>
       </motion.nav>
 
       {/* Hero */}
@@ -215,25 +212,38 @@ export default function Home() {
           style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12 }}
         >
           <motion.a
-            href="/auth/signup"
+            href="/download"
             whileHover={{ scale: 1.03 }}
             whileTap={{ scale: 0.97 }}
             style={{
-              background: '#EF9F27', color: '#1a0e00', fontSize: 14, fontWeight: 500,
+              background: '#EF9F27', color: '#1a0e00', fontSize: 14, fontWeight: 600,
               padding: '11px 24px', borderRadius: 10, border: 'none', cursor: 'pointer',
               letterSpacing: '-0.01em', textDecoration: 'none', display: 'inline-block',
             }}
           >
-            Start for free
+            Download Extension
           </motion.a>
-          <motion.button
-            onClick={() => setIsDemoOpen(true)}
+          <motion.a
+            href="/dashboard"
             whileHover={{ background: 'rgba(255,255,255,0.08)' }}
             whileTap={{ scale: 0.97 }}
             style={{
               background: 'rgba(255,255,255,0.04)', color: 'rgba(255,255,255,0.5)',
               fontSize: 14, padding: '11px 24px', borderRadius: 10,
               border: '0.5px solid rgba(255,255,255,0.08)', cursor: 'pointer',
+              textDecoration: 'none', display: 'inline-block',
+            }}
+          >
+            View Dashboard
+          </motion.a>
+          <motion.button
+            onClick={() => setIsDemoOpen(true)}
+            whileHover={{ background: 'rgba(255,255,255,0.08)' }}
+            whileTap={{ scale: 0.97 }}
+            style={{
+              background: 'transparent', color: 'rgba(255,255,255,0.35)',
+              fontSize: 13, padding: '11px 20px', borderRadius: 10,
+              border: '0.5px solid rgba(255,255,255,0.06)', cursor: 'pointer',
             }}
           >
             See how it works
@@ -285,12 +295,72 @@ export default function Home() {
           ))}
         </div>
 
+        {/* How it works — 3 steps */}
+        <div style={{ maxWidth: 700, margin: '56px auto 0' }}>
+          <div style={{
+            fontSize: 11, fontWeight: 600, letterSpacing: '0.12em',
+            color: 'rgba(255,255,255,0.25)', textTransform: 'uppercase',
+            textAlign: 'center', marginBottom: 28,
+          }}>
+            How it works
+          </div>
+          <div style={{
+            display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+            gap: 12,
+          }}>
+            {[
+              { n: '01', title: 'Install the Extension', desc: 'Add Synapt to Chrome in one click. No setup required.' },
+              { n: '02', title: 'Work Normally', desc: 'Synapt runs in the background, detecting drift signals as you work.' },
+              { n: '03', title: 'Review Your Data', desc: 'Open the dashboard anytime to see your focus patterns, session history, and cognitive profile.' },
+            ].map(({ n, title, desc }) => (
+              <div key={n} style={{
+                background: 'rgba(255,255,255,0.02)',
+                border: '0.5px solid rgba(255,255,255,0.06)',
+                borderRadius: 14, padding: '22px 20px',
+              }}>
+                <div style={{
+                  fontSize: 13, fontWeight: 700, color: '#EF9F27',
+                  letterSpacing: '-0.01em', marginBottom: 10,
+                }}>{n}</div>
+                <div style={{ fontSize: 13, fontWeight: 500, color: '#f5f0e8', marginBottom: 6 }}>{title}</div>
+                <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.3)', lineHeight: 1.65 }}>{desc}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+
         {/* Stats */}
         <div style={{
           display: 'flex', justifyContent: 'center', gap: 56,
           padding: '52px 40px', borderTop: '0.5px solid rgba(255,255,255,0.04)', marginTop: 44,
         }}>
           {stats.map((s) => <AnimatedStat key={s.label} value={s.value} label={s.label} />)}
+        </div>
+
+        {/* Bottom CTA */}
+        <div style={{
+          textAlign: 'center', padding: '48px 24px 56px',
+          borderTop: '0.5px solid rgba(255,255,255,0.04)',
+        }}>
+          <div style={{ fontSize: 28, fontWeight: 500, color: '#f5f0e8', letterSpacing: '-0.03em', marginBottom: 10 }}>
+            Ready to focus better?
+          </div>
+          <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.35)', marginBottom: 28 }}>
+            Install the Synapt extension and start your first session in under a minute.
+          </p>
+          <motion.a
+            href="/download"
+            whileHover={{ scale: 1.03 }}
+            whileTap={{ scale: 0.97 }}
+            style={{
+              display: 'inline-block',
+              background: '#EF9F27', color: '#1a0e00',
+              fontSize: 14, fontWeight: 600, letterSpacing: '-0.01em',
+              padding: '12px 28px', borderRadius: 10, textDecoration: 'none',
+            }}
+          >
+            Download Extension
+          </motion.a>
         </div>
       </div>
     </div>
