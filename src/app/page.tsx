@@ -1,7 +1,8 @@
 'use client';
 
 import { motion, useInView } from 'framer-motion';
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
+import DemoOverlay from '@/components/DemoOverlay';
 
 const SynaptLogo = () => (
   <svg width="26" height="26" viewBox="0 0 26 26" fill="none">
@@ -109,7 +110,10 @@ function FeatureCard({ title, desc, accent, index }: { title: string; desc: stri
 }
 
 export default function Home() {
+  const [isDemoOpen, setIsDemoOpen] = useState(false);
+
   return (
+    <>
     <div style={{ background: '#080806', minHeight: '100vh', fontFamily: 'inherit' }}>
 
       {/* Nav */}
@@ -219,6 +223,7 @@ export default function Home() {
             Start for free
           </motion.a>
           <motion.button
+            onClick={() => setIsDemoOpen(true)}
             whileHover={{ background: 'rgba(255,255,255,0.08)' }}
             whileTap={{ scale: 0.97 }}
             style={{
@@ -285,5 +290,8 @@ export default function Home() {
         </div>
       </div>
     </div>
+
+    <DemoOverlay isOpen={isDemoOpen} onClose={() => setIsDemoOpen(false)} />
+    </>
   );
 }
