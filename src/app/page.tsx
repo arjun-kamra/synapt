@@ -136,12 +136,16 @@ export default function Home() {
           <span style={{ fontSize: 17, fontWeight: 500, color: '#f5f0e8', letterSpacing: '-0.02em' }}>Synapt</span>
         </div>
         <div style={{ display: 'flex', gap: 28 }}>
-          {['How it works', 'Research', 'Pricing'].map((link) => (
-            <a key={link} href="#" style={{ fontSize: 13, color: 'rgba(255,255,255,0.35)', textDecoration: 'none',
+          {[
+            { label: 'How it works', href: '#' },
+            { label: 'Research', href: '/research' },
+            { label: 'Pricing', href: '#' },
+          ].map(({ label, href }) => (
+            <a key={label} href={href} style={{ fontSize: 13, color: 'rgba(255,255,255,0.35)', textDecoration: 'none',
               transition: 'color 0.2s' }}
               onMouseEnter={e => (e.currentTarget.style.color = 'rgba(255,255,255,0.7)')}
               onMouseLeave={e => (e.currentTarget.style.color = 'rgba(255,255,255,0.35)')}
-            >{link}</a>
+            >{label}</a>
           ))}
         </div>
         <a href="/auth/login" style={{
